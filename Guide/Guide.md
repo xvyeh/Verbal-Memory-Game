@@ -67,40 +67,19 @@ npm test
 
 ✅ Testing Checklist
 User registration
-
 User login
-
 JWT authentication
-
 Solo game mode
-
 Score saving
-
 Leaderboard
-
 Game history
-
 Friend requests
-
 1v1 challenges
-
 Match scoring
-
 Winner determination
 
 🔮 Future Improvements
 WebSockets for real-time 1v1 gameplay
-
 Word difficulty levels
-
 Daily challenges
-
 Mobile app version
-
-📄 License
-MIT
-
-🙏 Acknowledgements
-Inspired by Human Benchmark
-
-Word list from common English vocabulary
