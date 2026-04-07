@@ -64,29 +64,7 @@ bash
 cd backend
 npm install --save-dev jest supertest
 npm test
-📁 Project Structure
-text
-verbal-memory-game/
-├── backend/
-│   ├── server.js
-│   ├── package.json
-│   └── tests/
-│       └── game.test.js
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── components/
-│   │   │   ├── Login.tsx
-│   │   │   ├── Register.tsx
-│   │   │   ├── Game.tsx
-│   │   │   ├── OneVsOne.tsx
-│   │   │   ├── Profile.tsx
-│   │   │   ├── Leaderboard.tsx
-│   │   │   └── Docs.tsx
-│   │   └── types.ts
-│   ├── package.json
-│   └── public/
-└── README.md
+
 ✅ Testing Checklist
 User registration
 
