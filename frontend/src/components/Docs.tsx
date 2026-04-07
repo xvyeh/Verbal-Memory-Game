@@ -1,4 +1,3 @@
-// frontend/src/components/Docs.tsx
 import React from 'react';
 
 const Docs: React.FC = () => {
