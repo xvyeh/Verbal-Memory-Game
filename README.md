@@ -1,2 +1,8 @@
-# WordMemorise
-Your usual react project although this one is quite a copy of human benchmark's Verbal Memory game.
+# Verbal Memory Game - Full Stack Application
+# Based on Human Benchmark verbal memory test
+
+# Project Structure:
+# backend/ - Node.js + Express + PostgreSQL
+# frontend/ - React + TypeScript
+
+# By Jakub Sobala
