@@ -31,3 +31,11 @@ Read documentation at /docs
 
 The game implements the exact same mechanics as Human Benchmark's Verbal Memory test - players must remember if they've seen each word before, and the game ends on the first mistake. All scores are saved and tracked per user with a global leaderboard.
 
+# Verbal Memory Game - Full Stack Application
+Based on Human Benchmark verbal memory test
+
+# Project Structure:
+backend/ - Node.js + Express + PostgreSQL
+frontend/ - React + TypeScript
+
+- ```Jakub Sobala```
