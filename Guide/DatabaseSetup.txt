@@ -1,0 +1,53 @@
+CREATE DATABASE verbal_memory;
+
+\c verbal_memory;
+
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  best_score INTEGER DEFAULT 0,
+  games_played INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE games (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  correct_answers INTEGER NOT NULL,
+  wrong_answers INTEGER NOT NULL,
+  duration_seconds INTEGER,
+  played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE words (
+  id SERIAL PRIMARY KEY,
+  word VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Insert seed words
+INSERT INTO words (word) VALUES 
+('apple'), ('house'), ('car'), ('dog'), ('cat'), ('tree'), ('book'), ('phone'), ('computer'), ('water'),
+('fire'), ('earth'), ('wind'), ('sun'), ('moon'), ('star'), ('flower'), ('grass'), ('cloud'), ('rain');
+
+CREATE TABLE matches (
+  id SERIAL PRIMARY KEY,
+  player1_id INTEGER REFERENCES users(id),
+  player2_id INTEGER REFERENCES users(id),
+  player1_score INTEGER DEFAULT 0,
+  player2_score INTEGER DEFAULT 0,
+  winner_id INTEGER REFERENCES users(id),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP
+);
+
+CREATE TABLE friendships (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  friend_id INTEGER REFERENCES users(id),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
