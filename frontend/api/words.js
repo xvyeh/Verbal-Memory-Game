@@ -15,9 +15,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    // Return random word from mock list
-    const randomWord = mockWords[Math.floor(Math.random() * mockWords.length)];
-    res.json({ word: randomWord });
+    // Return a fixed test word first
+    res.json({ word: 'test' });
   } catch (error) {
     res.status(401).json({ error: error.message });
   }
