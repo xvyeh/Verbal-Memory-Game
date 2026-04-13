@@ -119,11 +119,8 @@ const Game: React.FC<GameProps> = ({ user, setUser }) => {
         <div className="game-over-card">
           <h2>Game Over!</h2>
           <div className="final-score">Final Score: {score}</div>
-          <div className="stats">
-            <div>✅ Correct: {correctCount}</div>
-          </div>
           <button onClick={resetGame} className="play-again-btn">Play Again</button>
-        </div>
+        </div> 
       </div>
     );
   }
