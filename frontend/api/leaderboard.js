@@ -1,17 +1,15 @@
-import pool from '../_db.js';
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const result = await pool.query(
-      'SELECT u.username, u.best_score, u.games_played FROM users u ORDER BY u.best_score DESC LIMIT 10'
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  // Mock leaderboard data
+  const mockLeaderboard = [
+    { username: 'champion', best_score: 50, games_played: 20 },
+    { username: 'player2', best_score: 45, games_played: 15 },
+    { username: 'player3', best_score: 40, games_played: 12 },
+    { username: 'testuser', best_score: 25, games_played: 5 },
+  ];
+
+  res.json(mockLeaderboard);
 }

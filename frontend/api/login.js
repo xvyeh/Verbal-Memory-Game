@@ -1,8 +1,13 @@
-import pool from './_db.js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,31 +20,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const user = result.rows[0];
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        best_score: user.best_score,
-        games_played: user.games_played,
-      },
-      token,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  // Mock response - no database needed
+  const mockUser = {
+    id: 1,
+    username: email.split('@')[0], // Use email prefix as username
+    email,
+    best_score: 25,
+    games_played: 5
+  };
+  const mockToken = 'mock-jwt-token-' + Date.now();
+  
+  res.json({
+    user: mockUser,
+    token: mockToken,
+  });
+}
 }

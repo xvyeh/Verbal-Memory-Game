@@ -1,31 +1,25 @@
-import pool from './_db.js';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-function authenticate(req) {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) throw new Error('No token provided');
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return decoded.userId;
-  } catch (error) {
-    throw new Error('Invalid token');
-  }
-}
+// Mock word list for testing
+const mockWords = [
+  'apple', 'banana', 'cherry', 'date', 'elderberry',
+  'fig', 'grape', 'honeydew', 'kiwi', 'lemon',
+  'mango', 'nectarine', 'orange', 'peach', 'quince',
+  'raspberry', 'strawberry', 'tangerine', 'ugli', 'vanilla',
+  'watermelon', 'xigua', 'yam', 'zucchini'
+];
 
 export default async function handler(req, res) {
-  }
-
   try {
-    authenticate(req);
-    const result = await pool.query('SELECT word FROM words ORDER BY RANDOM() LIMIT 1');
-    if (result.rows.length === 0) {
-      return res.status(500).json({ error: 'No words in database' });
+    // Mock authentication - just check if token exists
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
     }
-    res.json({ word: result.rows[0].word });
+
+    // Return random word from mock list
+    const randomWord = mockWords[Math.floor(Math.random() * mockWords.length)];
+    res.json({ word: randomWord });
   } catch (error) {
     res.status(401).json({ error: error.message });
   }
+}
 }
