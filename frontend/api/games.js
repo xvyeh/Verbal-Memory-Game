@@ -1,5 +1,5 @@
-const pool = require('./_db');
-const jwt = require('jsonwebtoken');
+import pool from './_db.js';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -15,7 +15,7 @@ function authenticate(req) {
   }
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   }
 
   try {

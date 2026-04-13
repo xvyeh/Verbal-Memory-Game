@@ -5,4 +5,4 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-module.exports = pool;
+export default pool;
