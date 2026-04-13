@@ -1,5 +1,3 @@
-import { findUserByEmail } from './_db';
-
 export default function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -11,20 +9,16 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
-  const user = findUserByEmail(email);
+  // Mock user
+  const user = {
+    id: 1,
+    username: email.split('@')[0],
+    email,
+    best_score: 25,
+    games_played: 5,
+  };
 
-  if (!user || user.password !== password) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
+  const token = 'mock-token-' + Date.now();
 
-  return res.status(200).json({
-    user: {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      best_score: user.best_score,
-      games_played: user.games_played,
-    },
-    token: 'mock-token-' + Date.now(),
-  });
+  return res.status(200).json({ user, token });
 }

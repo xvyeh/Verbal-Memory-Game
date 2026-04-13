@@ -1,15 +1,15 @@
-import { getUsers } from './_db';
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-export default function handler(req, res) {
-  const users = getUsers();
+  // Mock leaderboard data
+  const mockLeaderboard = [
+    { username: 'champion', best_score: 50, games_played: 20 },
+    { username: 'player2', best_score: 45, games_played: 15 },
+    { username: 'player3', best_score: 40, games_played: 12 },
+    { username: 'testuser', best_score: 25, games_played: 5 },
+  ];
 
-  const leaderboard = users
-    .sort((a, b) => b.best_score - a.best_score)
-    .map(u => ({
-      username: u.username,
-      best_score: u.best_score,
-      games_played: u.games_played,
-    }));
-
-  return res.status(200).json(leaderboard);
+  res.json(mockLeaderboard);
 }
