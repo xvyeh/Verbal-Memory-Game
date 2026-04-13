@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../types';
 
 interface LoginProps {
@@ -27,7 +27,9 @@ const Login: React.FC<LoginProps> = ({ setUser }) => {
       setUser(user);
       navigate('/game');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      const errorMessage = err.response?.data?.error || 'Login failed';
+      setError(errorMessage);
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ const Login: React.FC<LoginProps> = ({ setUser }) => {
           </button>
         </form>
         <p className="auth-link">
-          Don't have an account? <a href="/register">Register</a>
+          Don't have an account? <Link to="/register">Register</Link>
         </p>
       </div>
     </div>

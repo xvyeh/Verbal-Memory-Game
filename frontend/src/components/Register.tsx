@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../types';
 
 interface RegisterProps {
@@ -21,14 +21,13 @@ const Register: React.FC<RegisterProps> = ({ setUser }) => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/register', { username, email, password });
-      const { user, token } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      navigate('/game');
+      await axios.post('/api/register', { username, email, password });
+      alert('Registration successful! Please log in.');
+      navigate('/login');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed');
+      const errorMessage = err.response?.data?.error || 'Registration failed';
+      setError(errorMessage);
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -67,7 +66,7 @@ const Register: React.FC<RegisterProps> = ({ setUser }) => {
           </button>
         </form>
         <p className="auth-link">
-          Already have an account? <a href="/login">Login</a>
+          Already have an account? <Link to="/login">Login</Link>
         </p>
       </div>
     </div>
