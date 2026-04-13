@@ -7,7 +7,7 @@ A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbe
 - **Solo Mode** - Infinite words, game ends on first mistake
 - **Leaderboard** - Global top scores
 - **User Profiles** - Track your stats and game history(currently does not work)
-- **JWT Authentication** - Secure login/registration
+- **Authentication** - Secure login/registration
 
 ## 🛠 Tech Stack
 
@@ -16,7 +16,7 @@ A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbe
 | Frontend | React 18, TypeScript, CSS3 |
 | Backend | Vercel API Routes, Node.js |
 | Database | PostgreSQL |
-| Auth | JWT, bcrypt |
+| Auth | bcrypt |
 
 ## 🚀 Quick Start
 
