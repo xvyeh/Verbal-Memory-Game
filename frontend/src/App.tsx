@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User } from './types';
 import Login from './components/Login.tsx';
@@ -39,7 +39,7 @@ const App: React.FC = () => {
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <nav className="navbar">
         <div className="nav-brand">🧠 Verbal Memory</div>
         <div className="nav-links">
@@ -70,7 +70,7 @@ const App: React.FC = () => {
         <Route path="/docs" element={<Docs />} />
         <Route path="/" element={<Navigate to={user ? "/game" : "/login"} />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
