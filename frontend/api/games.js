@@ -1,13 +1,13 @@
 export default async function handler(req, res) {
   try {
-    // Mock authentication - just check if token exists
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
+    // Temporarily remove auth check for debugging
+    // const token = req.headers.authorization?.split(' ')[1];
+    // if (!token) {
+    //   return res.status(401).json({ error: 'No token provided' });
+    // }
 
     const { score } = req.body;
-    
+
     // Mock response - always return success
     res.json({ success: true, new_best: score > 20 }); // Mock new best if score > 20
   } catch (error) {
