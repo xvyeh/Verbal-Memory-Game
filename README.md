@@ -1,6 +1,7 @@
 # 🧠 Verbal Memory Game
 
 A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbenchmark.com/tests/verbal-memory) - test how many words you can remember before making a mistake!
+(https://word-memorise.vercel.app/)
 
 ## ✨ Features
 
