@@ -1,8 +1,22 @@
-const { Pool } = require('pg');
+let users = [];
+let games = [];
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+export function getUsers() {
+  return users;
+}
 
-export default pool;
+export function addUser(user) {
+  users.push(user);
+}
+
+export function findUserByEmail(email) {
+  return users.find(u => u.email === email);
+}
+
+export function addGame(game) {
+  games.push(game);
+}
+
+export function getGames() {
+  return games;
+}
