@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { User } from '../types';
-import './Game.css';
 
 interface GameProps {
   user: User;

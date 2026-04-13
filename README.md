@@ -5,7 +5,6 @@ A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbe
 ## ✨ Features
 
 - **Solo Mode** - Infinite words, game ends on first mistake
-- **1v1 Mode** - Challenge friends to 10-round battles
 - **Leaderboard** - Global top scores
 - **User Profiles** - Track your stats and game history
 - **JWT Authentication** - Secure login/registration
@@ -15,7 +14,7 @@ A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbe
 | Layer | Technologies |
 |-------|--------------|
 | Frontend | React 18, TypeScript, CSS3 |
-| Backend | Node.js, Express.js |
+| Backend | Vercel API Routes, Node.js |
 | Database | PostgreSQL |
 | Auth | JWT, bcrypt |
 

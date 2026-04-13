@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User } from './types';
-import Login from './components/Login';
-import Register from './components/Register';
-import Game from './components/Game';
-import Profile from './components/Profile';
-import Leaderboard from './components/Leaderboard';
-import Docs from './components/Docs';
+import Login from './components/Login.tsx';
+import Register from './components/Register.tsx';
+import Game from './components/Game.tsx';
+import Profile from './components/Profile.tsx';
+import Leaderboard from './components/Leaderboard.tsx';
+import Docs from './components/Docs.tsx';
 import './App.css';
-
-axios.defaults.baseURL = 'http://localhost:5000';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
