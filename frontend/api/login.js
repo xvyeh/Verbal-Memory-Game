@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+export default function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -9,18 +9,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
-  // Mock response - no database needed
-  const mockUser = {
+  // Mock user
+  const user = {
     id: 1,
-    username: email.split('@')[0], // Use email prefix as username
+    username: email.split('@')[0],
     email,
     best_score: 25,
-    games_played: 5
+    games_played: 5,
   };
-  const mockToken = 'mock-jwt-token-' + Date.now();
 
-  res.json({
-    user: mockUser,
-    token: mockToken,
-  });
+  const token = 'mock-token-' + Date.now();
+
+  return res.status(200).json({ user, token });
 }
