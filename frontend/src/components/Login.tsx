@@ -27,7 +27,10 @@ const Login: React.FC<LoginProps> = ({ setUser }) => {
       setUser(user);
       navigate('/game');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'Login failed';
+      let errorMessage = err.response?.data?.error || 'Login failed';
+      if (typeof errorMessage !== 'string') {
+        errorMessage = JSON.stringify(errorMessage);
+      }
       setError(errorMessage);
       alert(errorMessage);
     } finally {

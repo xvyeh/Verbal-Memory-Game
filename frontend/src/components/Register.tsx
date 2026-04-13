@@ -25,7 +25,10 @@ const Register: React.FC<RegisterProps> = ({ setUser }) => {
       alert('Registration successful! Please log in.');
       navigate('/login');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'Registration failed';
+      let errorMessage = err.response?.data?.error || 'Registration failed';
+      if (typeof errorMessage !== 'string') {
+        errorMessage = JSON.stringify(errorMessage);
+      }
       setError(errorMessage);
       alert(errorMessage);
     } finally {
