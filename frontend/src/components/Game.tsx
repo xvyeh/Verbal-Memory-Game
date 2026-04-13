@@ -121,8 +121,6 @@ const Game: React.FC<GameProps> = ({ user, setUser }) => {
           <div className="final-score">Final Score: {score}</div>
           <div className="stats">
             <div>✅ Correct: {correctCount}</div>
-            <div>❌ Wrong: {wrongCount}</div>
-            <div>📊 Accuracy: {Math.round((correctCount / (correctCount + wrongCount)) * 100)}%</div>
           </div>
           <button onClick={resetGame} className="play-again-btn">Play Again</button>
         </div>
@@ -134,10 +132,6 @@ const Game: React.FC<GameProps> = ({ user, setUser }) => {
     <div className="game-container">
       <div className="game-header">
         <div className="score">Score: {score}</div>
-        <div className="stats-info">
-          <span className="correct">✓ {correctCount}</span>
-          <span className="wrong">✗ {wrongCount}</span>
-        </div>
       </div>
       
       <div className="word-card">

@@ -5,10 +5,10 @@ export default async function handler(req, res) {
 
   // Mock leaderboard data
   const mockLeaderboard = [
-    { username: 'champion', best_score: 50, games_played: 20 },
-    { username: 'player2', best_score: 45, games_played: 15 },
-    { username: 'player3', best_score: 40, games_played: 12 },
-    { username: 'testuser', best_score: 25, games_played: 5 },
+    { username: 'nettspend', best_score: 52, games_played: 20 },
+    { username: 'kuba', best_score: 37, games_played: 15 },
+    { username: 'grajchlopieckartezjusz', best_score: 27, games_played: 12 },
+    { username: 'drake', best_score: 13, games_played: 5 },
   ];
 
   res.json(mockLeaderboard);
