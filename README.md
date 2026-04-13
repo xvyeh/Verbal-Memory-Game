@@ -6,7 +6,7 @@ A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbe
 
 - **Solo Mode** - Infinite words, game ends on first mistake
 - **Leaderboard** - Global top scores
-- **User Profiles** - Track your stats and game history
+- **User Profiles** - Track your stats and game history(currently does not work)
 - **JWT Authentication** - Secure login/registration
 
 ## 🛠 Tech Stack
