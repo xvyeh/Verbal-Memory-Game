@@ -1,39 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { User } from './types';
-import Login from './components/Login.tsx';
-import Register from './components/Register.tsx';
-import Game from './components/Game.tsx';
-import Profile from './components/Profile.tsx';
-import Leaderboard from './components/Leaderboard.tsx';
-import Docs from './components/Docs.tsx';
+import { supabase } from './supabaseClient';
+import Login from './components/Login';
+import Register from './components/Register';
+import Game from './components/Game';
+import Profile from './components/Profile';
+import Leaderboard from './components/Leaderboard';
+import Lobby from './components/Lobby';
+import OneVsOne from './components/OneVsOne';
+import Docs from './components/Docs';
 import './App.css';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.get('/api/user')
-        .then(res => setUser(res.data))
-        .catch(() => {
-          localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization'];
-        })
-        .finally(() => setLoading(false));
-    } else {
+    // Check current session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
-    }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-    setUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   if (loading) return <div className="loading">Loading...</div>;
@@ -45,30 +43,38 @@ const App: React.FC = () => {
         <div className="nav-links">
           {user ? (
             <>
-              <Link to="/game">Play</Link>
+              <Link to="/lobby">1v1 Arena</Link>
+              <Link to="/game">Solo Play</Link>
               <Link to="/profile">Profile</Link>
               <Link to="/leaderboard">Leaderboard</Link>
-              <Link to="/docs">Docs</Link>
-              <span className="user-greeting">Hello, {user.username}</span>
               <button onClick={handleLogout} className="logout-btn">Logout</button>
             </>
           ) : (
             <>
               <Link to="/login">Login</Link>
               <Link to="/register">Register</Link>
-              <Link to="/docs">Docs</Link>
             </>
           )}
         </div>
       </nav>
+
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/game" /> : <Login setUser={setUser} />} />
-        <Route path="/register" element={user ? <Navigate to="/game" /> : <Register setUser={setUser} />} />
-        <Route path="/game" element={user ? <Game user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+        {/* Auth Routes */}
+        <Route path="/login" element={user ? <Navigate to="/lobby" /> : <Login />} />
+        <Route path="/register" element={user ? <Navigate to="/lobby" /> : <Register />} />
+
+        {/* Game Routes */}
+        <Route path="/lobby" element={user ? <Lobby userId={user.id} /> : <Navigate to="/login" />} />
+        <Route path="/1v1/:matchId" element={user ? <OneVsOne userId={user.id} /> : <Navigate to="/login" />} />
+        <Route path="/game" element={user ? <Game user={user} /> : <Navigate to="/login" />} />
+        
+        {/* Profile & Info */}
         <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/login" />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/docs" element={<Docs />} />
-        <Route path="/" element={<Navigate to={user ? "/game" : "/login"} />} />
+
+        {/* Default Redirect */}
+        <Route path="/" element={<Navigate to={user ? "/lobby" : "/login"} />} />
       </Routes>
     </HashRouter>
   );

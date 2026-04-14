@@ -1,71 +1,38 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
-import { User } from '../types';
+import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
-interface LoginProps {
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-}
-
-const Login: React.FC<LoginProps> = ({ setUser }) => {
+const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
-    try {
-      const response = await axios.post('/api/login', { email, password });
-      const { user, token } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      navigate('/game');
-    } catch (err: any) {
-      let errorMessage = err.response?.data?.error || 'Login failed';
-      if (typeof errorMessage !== 'string') {
-        errorMessage = JSON.stringify(errorMessage);
-      }
-      setError(errorMessage);
-      alert(errorMessage);
-    } finally {
-      setLoading(false);
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError(authError.message);
+    } else {
+      navigate('/lobby');
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h2>Login to Verbal Memory</h2>
-        {error && <div className="error-message">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Login"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Register</Link>
-        </p>
-      </div>
+    <div className="auth-form">
+      <h2>Login</h2>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleLogin}>
+        <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} required />
+        <button type="submit">Login</button>
+      </form>
     </div>
   );
 };
