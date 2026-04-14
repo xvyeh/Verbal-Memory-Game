@@ -47,14 +47,17 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
       if (waitingError) throw waitingError;
 
       if (waiting) {
-        const { error: insertError } = await supabase.from('matches').insert({
-          player1_id: waiting.player_id,
-          player2_id: userId,
-          player1_score: 0,
-          player2_score: 0,
-          status: 'active',
-          winner_id: null
-        });
+        const { data: insertedMatch, error: insertError } = await supabase.from('matches')
+          .insert({
+            player1_id: waiting.player_id,
+            player2_id: userId,
+            player1_score: 0,
+            player2_score: 0,
+            status: 'active',
+            winner_id: null
+          })
+          .select('id')
+          .single();
         if (insertError) throw insertError;
 
         const { error: deleteError } = await supabase
@@ -62,6 +65,11 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
           .delete()
           .in('player_id', [waiting.player_id, userId]);
         if (deleteError) throw deleteError;
+
+        if (insertedMatch?.id) {
+          navigate(`/1v1/${insertedMatch.id}`);
+          return;
+        }
       }
     } catch (error: any) {
       console.error('Matchmaking error', error);
