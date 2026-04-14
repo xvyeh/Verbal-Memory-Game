@@ -27,23 +27,6 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
     return () => { supabase.removeChannel(channel); };
   }, [userId, navigate]);
 
-  const getMatchWords = async () => {
-    const { data: words, error: wordsError } = await supabase.rpc('get_random_words', { cnt: 20 });
-    if (wordsError || !words) {
-      const { data: storedWords, error: storedWordsError } = await supabase
-        .from('words')
-        .select('word');
-      if (storedWordsError || !storedWords?.length) {
-        throw wordsError || storedWordsError || new Error('No words available.');
-      }
-      return Array.from({ length: 20 }, () => {
-        const index = Math.floor(Math.random() * storedWords.length);
-        return storedWords[index].word;
-      });
-    }
-    return words.map((w: any) => w.word);
-  };
-
   const startMatchmaking = async () => {
     setIsQueuing(true);
     setQueueError(null);
@@ -63,14 +46,14 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
         .maybeSingle();
       if (waitingError) throw waitingError;
 
-      if (waiting && userId > waiting.player_id) {
-        const words = await getMatchWords();
-
+      if (waiting) {
         const { error: insertError } = await supabase.from('matches').insert({
           player1_id: waiting.player_id,
           player2_id: userId,
-          match_words: words,
-          status: 'active'
+          player1_score: 0,
+          player2_score: 0,
+          status: 'active',
+          winner_id: null
         });
         if (insertError) throw insertError;
 

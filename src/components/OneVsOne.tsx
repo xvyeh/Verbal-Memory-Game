@@ -6,13 +6,52 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const [match, setMatch] = useState<any>(null);
+  const [wordList, setWordList] = useState<string[]>([]);
   const [round, setRound] = useState(0);
   const [history] = useState(new Set<string>());
+
+  const seedFromString = (text: string) => {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  };
+
+  const buildWordSequence = (words: string[], seedValue: number) => {
+    if (!words.length) return [];
+    let state = seedValue;
+    const result: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      const index = Math.floor((state / 2 ** 32) * words.length);
+      result.push(words[index]);
+    }
+    return result;
+  };
 
   useEffect(() => {
     const initMatch = async () => {
       const { data } = await supabase.from('matches').select('*').eq('id', matchId).single();
+      if (!data) return;
       setMatch(data);
+
+      if (Array.isArray(data.match_words) && data.match_words.length) {
+        setWordList(data.match_words);
+        return;
+      }
+      if (Array.isArray(data.words) && data.words.length) {
+        setWordList(data.words);
+        return;
+      }
+
+      const { data: allWords } = await supabase
+        .from('words')
+        .select('word')
+        .order('id', { ascending: true });
+
+      const words = (allWords || []).map((item: any) => item.word).filter(Boolean);
+      setWordList(buildWordSequence(words, seedFromString(matchId || '')));
     };
     initMatch();
 
@@ -24,11 +63,12 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     return () => { supabase.removeChannel(sub); };
   }, [matchId]);
 
+  const currentWord = wordList[round] || '';
+
   const handleChoice = async (choice: 'seen' | 'new') => {
-    const word = match.match_words[round];
-    const isCorrect = (choice === 'seen' && history.has(word)) || (choice === 'new' && !history.has(word));
+    const isCorrect = (choice === 'seen' && history.has(currentWord)) || (choice === 'new' && !history.has(currentWord));
     
-    if (choice === 'new') history.add(word);
+    if (choice === 'new') history.add(currentWord);
 
     const isP1 = match.player1_id === userId;
     const update = isP1 ? { player1_score: match.player1_score + (isCorrect ? 1 : 0) } 
@@ -49,12 +89,12 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     navigate('/leaderboard');
   };
 
-  if (!match) return <div>Loading...</div>;
+  if (!match || !wordList.length) return <div>Loading...</div>;
 
   return (
     <div className="game-screen">
       <div className="hud">Opponent Score: {userId === match.player1_id ? match.player2_score : match.player1_score}</div>
-      <h1 className="word-display">{match.match_words[round]}</h1>
+      <h1 className="word-display">{currentWord}</h1>
       <div className="controls">
         <button onClick={() => handleChoice('seen')}>SEEN</button>
         <button onClick={() => handleChoice('new')}>NEW</button>
