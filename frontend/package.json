@@ -1,36 +1,14 @@
 {
   "name": "verbal-memory-frontend",
   "version": "1.0.0",
-  "private": true,
-  "homepage": ".",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.14.0",
-    "axios": "^1.4.0",
+    "@supabase/supabase-js": "^2.39.0", 
     "typescript": "^4.9.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
-    "pg": "^8.11.0",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.0"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "node ./node_modules/react-scripts/scripts/build.js",
-    "test": "node ./node_modules/react-scripts/scripts/test.js"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "react-scripts": "5.0.1"
   }
 }
