@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
   const [isQueuing, setIsQueuing] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,29 +29,44 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
 
   const startMatchmaking = async () => {
     setIsQueuing(true);
-    
-    // 1. Check if anyone is waiting
-    const { data: waiting } = await supabase
-      .from('matchmaking_queue')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
+    setQueueError(null);
 
-    if (waiting && waiting.player_id !== userId) {
-      // 2. Someone is waiting! Create match & remove them from queue
-      const { data: words } = await supabase.rpc('get_random_words', { cnt: 20 });
-      
-      await supabase.from('matches').insert({
-        player1_id: waiting.player_id,
-        player2_id: userId,
-        match_words: words.map((w: any) => w.word),
-        status: 'active'
-      });
-      
-      await supabase.from('matchmaking_queue').delete().eq('player_id', waiting.player_id);
-    } else {
-      // 3. No one there, I'm the first one. Join queue.
-      await supabase.from('matchmaking_queue').upsert({ player_id: userId });
+    try {
+      const { data: waiting, error: waitingError } = await supabase
+        .from('matchmaking_queue')
+        .select('*')
+        .neq('player_id', userId)
+        .limit(1)
+        .maybeSingle();
+      if (waitingError) throw waitingError;
+
+      if (waiting) {
+        const { data: words, error: wordsError } = await supabase.rpc('get_random_words', { cnt: 20 });
+        if (wordsError) throw wordsError;
+
+        const { error: insertError } = await supabase.from('matches').insert({
+          player1_id: waiting.player_id,
+          player2_id: userId,
+          match_words: words.map((w: any) => w.word),
+          status: 'active'
+        });
+        if (insertError) throw insertError;
+
+        const { error: deleteError } = await supabase
+          .from('matchmaking_queue')
+          .delete()
+          .eq('player_id', waiting.player_id);
+        if (deleteError) throw deleteError;
+      } else {
+        const { error: upsertError } = await supabase
+          .from('matchmaking_queue')
+          .upsert({ player_id: userId }, { onConflict: 'player_id' });
+        if (upsertError) throw upsertError;
+      }
+    } catch (error: any) {
+      console.error('Matchmaking error', error);
+      setQueueError(error?.message || JSON.stringify(error));
+      setIsQueuing(false);
     }
   };
 
@@ -60,6 +76,7 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
       <button onClick={startMatchmaking} disabled={isQueuing}>
         {isQueuing ? "Finding Opponent..." : "Enter Queue"}
       </button>
+      {queueError && <p className="error">Queue error: {queueError}</p>}
     </div>
   );
 };
