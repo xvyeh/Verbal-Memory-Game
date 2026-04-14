@@ -8,7 +8,10 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
   const [match, setMatch] = useState<any>(null);
   const [wordList, setWordList] = useState<string[]>([]);
   const [round, setRound] = useState(0);
-  const [history] = useState(new Set<string>());
+  const [seenWords, setSeenWords] = useState<Set<string>>(new Set());
+  const [myScore, setMyScore] = useState(0);
+  const [opponentScore, setOpponentScore] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
 
   const seedFromString = (text: string) => {
     let hash = 0;
@@ -30,11 +33,23 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     return result;
   };
 
+  const extractScores = (matchData: any) => {
+    if (!matchData) return { my: 0, opponent: 0 };
+    const isP1 = matchData.player1_id === userId;
+    return {
+      my: isP1 ? matchData.player1_score ?? 0 : matchData.player2_score ?? 0,
+      opponent: isP1 ? matchData.player2_score ?? 0 : matchData.player1_score ?? 0,
+    };
+  };
+
   useEffect(() => {
     const initMatch = async () => {
       const { data } = await supabase.from('matches').select('*').eq('id', matchId).single();
       if (!data) return;
       setMatch(data);
+      const { my, opponent } = extractScores(data);
+      setMyScore(my);
+      setOpponentScore(opponent);
 
       if (Array.isArray(data.words) && data.words.length) {
         setWordList(data.words);
@@ -53,53 +68,33 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
 
     const sub = supabase.channel(`live_match_${matchId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
-      (payload) => setMatch(payload.new))
+        (payload) => {
+          setMatch(payload.new);
+          const { my, opponent } = extractScores(payload.new);
+          setMyScore(my);
+          setOpponentScore(opponent);
+        }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(sub); };
-  }, [matchId]);
+  }, [matchId, userId]);
 
   const currentWord = wordList[round] || '';
 
-  const handleChoice = async (choice: 'seen' | 'new') => {
-    const isCorrect = (choice === 'seen' && history.has(currentWord)) || (choice === 'new' && !history.has(currentWord));
-    
-    if (choice === 'new') history.add(currentWord);
-
-    if (!isCorrect) {
-      await finalize();
-      return;
-    }
+  const finalizeMatch = async (finalMyScore: number, finalOppScore: number) => {
+    if (!match) return;
 
     const isP1 = match.player1_id === userId;
-    const update = isP1 ? { player1_score: match.player1_score + 1 } 
-                       : { player2_score: match.player2_score + 1 };
+    const winnerId = finalMyScore > finalOppScore
+      ? userId
+      : finalOppScore > finalMyScore
+        ? isP1 ? match.player2_id : match.player1_id
+        : null;
 
-    await supabase.from('matches').update(update).eq('id', matchId);
-
-    if (round < 19) setRound(r => r + 1);
-    else await finalize();
-  };
-
-  const finalize = async () => {
-    const p1Score = match.player1_score;
-    const p2Score = match.player2_score;
-    const isP1 = match.player1_id === userId;
-    const myScore = isP1 ? p1Score : p2Score;
-    const oppScore = isP1 ? p2Score : p1Score;
-    const win = myScore > oppScore;
-    const tie = myScore === oppScore;
-
-    let winnerId = null;
-    if (!tie) {
-      winnerId = win ? userId : (isP1 ? match.player2_id : match.player1_id);
-    }
-
-    // Update match
     await supabase.from('matches').update({ status: 'completed', winner_id: winnerId }).eq('id', matchId);
 
-    // Update ELO
-    if (!tie) {
+    if (winnerId) {
       const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
       const { data: winnerProfile } = await supabase.from('profiles').select('elo').eq('id', winnerId).single();
       const { data: loserProfile } = await supabase.from('profiles').select('elo').eq('id', loserId).single();
@@ -109,8 +104,45 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
       }
     }
 
-    alert(`Game Over!\nYour Score: ${myScore}\nOpponent Score: ${oppScore}\n${win ? '+25 ELO' : tie ? 'Tie' : '-25 ELO'}`);
+    const resultText = finalMyScore === finalOppScore
+      ? `Tie game! Your Score: ${finalMyScore}, Opponent Score: ${finalOppScore}`
+      : finalMyScore > finalOppScore
+        ? `You won! Your Score: ${finalMyScore}, Opponent Score: ${finalOppScore} (+25 ELO)`
+        : `You lost. Your Score: ${finalMyScore}, Opponent Score: ${finalOppScore} (-25 ELO)`;
+
+    setGameOver(true);
+    alert(resultText);
     navigate('/leaderboard');
+  };
+
+  const handleChoice = async (choice: 'seen' | 'new') => {
+    if (!match || gameOver) return;
+    const alreadySeen = seenWords.has(currentWord);
+    const isCorrect = (choice === 'seen' && alreadySeen) || (choice === 'new' && !alreadySeen);
+    const nextSeen = new Set(seenWords);
+    nextSeen.add(currentWord);
+    setSeenWords(nextSeen);
+
+    if (!isCorrect) {
+      await finalizeMatch(myScore, opponentScore);
+      return;
+    }
+
+    const updatedScore = myScore + 1;
+    const isP1 = match.player1_id === userId;
+    const update = isP1
+      ? { player1_score: updatedScore }
+      : { player2_score: updatedScore };
+
+    await supabase.from('matches').update(update).eq('id', matchId);
+    setMyScore(updatedScore);
+
+    if (round >= 19) {
+      await finalizeMatch(updatedScore, opponentScore);
+      return;
+    }
+
+    setRound((prev) => prev + 1);
   };
 
   if (!match || !wordList.length) return <div>Loading...</div>;
