@@ -4,6 +4,7 @@ export interface User {
   email: string;
   best_score: number;
   games_played: number;
+  elo: number;
 }
 
 export interface GameResult {

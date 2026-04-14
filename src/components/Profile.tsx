@@ -1,27 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { supabase } from '../supabaseClient';
 import { User, GameResult } from '../types';
 
 interface ProfileProps {
-  user: User;
+  userId: string;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user }) => {
+const Profile: React.FC<ProfileProps> = ({ userId }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [history, setHistory] = useState<GameResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('/api/games/history')
-      .then(res => setHistory(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    const fetchData = async () => {
+      // Fetch user data
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      setUser(userData);
+
+      // Fetch game history
+      const { data: historyData } = await supabase
+        .from('game_results')
+        .select('*')
+        .eq('user_id', userId)
+        .order('played_at', { ascending: false })
+        .limit(10);
+      setHistory(historyData || []);
+
+      setLoading(false);
+    };
+    fetchData();
+  }, [userId]);
+
+  if (loading || !user) return <div>Loading...</div>;
 
   return (
     <div className="profile-container">
       <div className="profile-header">
         <h1>👤 {user.username}</h1>
         <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-value">{user.elo}</div>
+            <div className="stat-label">ELO</div>
+          </div>
           <div className="stat-card">
             <div className="stat-value">{user.best_score}</div>
             <div className="stat-label">Best Score</div>

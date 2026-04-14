@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { supabase } from './supabaseClient';
+
 import Login from './components/Login';
 import Register from './components/Register';
 import Game from './components/Game';
@@ -16,16 +17,18 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check current session on mount
+    // Get session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -40,6 +43,7 @@ const App: React.FC = () => {
     <HashRouter>
       <nav className="navbar">
         <div className="nav-brand">🧠 Verbal Memory</div>
+
         <div className="nav-links">
           {user ? (
             <>
@@ -47,7 +51,9 @@ const App: React.FC = () => {
               <Link to="/game">Solo Play</Link>
               <Link to="/profile">Profile</Link>
               <Link to="/leaderboard">Leaderboard</Link>
-              <button onClick={handleLogout} className="logout-btn">Logout</button>
+              <button onClick={handleLogout} className="logout-btn">
+                Logout
+              </button>
             </>
           ) : (
             <>
@@ -59,22 +65,36 @@ const App: React.FC = () => {
       </nav>
 
       <Routes>
-        {/* Auth Routes */}
-        <Route path="/login" element={user ? <Navigate to="/lobby" /> : <Login />} />
-        <Route path="/register" element={user ? <Navigate to="/lobby" /> : <Register />} />
-
-        {/* Game Routes */}
-        <Route path="/lobby" element={user ? <Lobby userId={user.id} /> : <Navigate to="/login" />} />
-        <Route path="/1v1/:matchId" element={user ? <OneVsOne userId={user.id} /> : <Navigate to="/login" />} />
-        <Route path="/game" element={user ? <Game user={user} /> : <Navigate to="/login" />} />
-        
-        {/* Profile & Info */}
-        <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/login" />} />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/lobby" /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={user ? <Navigate to="/lobby" /> : <Register />}
+        />
+        <Route
+          path="/lobby"
+          element={user ? <Lobby userId={user.id} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/1v1/:matchId"
+          element={user ? <OneVsOne userId={user.id} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/game"
+          element={user ? <Game user={user} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile"
+          element={user ? <Profile userId={user.id} /> : <Navigate to="/login" />}
+        />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/docs" element={<Docs />} />
-
-        {/* Default Redirect */}
-        <Route path="/" element={<Navigate to={user ? "/lobby" : "/login"} />} />
+        <Route
+          path="/"
+          element={<Navigate to={user ? "/lobby" : "/login"} />}
+        />
       </Routes>
     </HashRouter>
   );
