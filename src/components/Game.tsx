@@ -5,108 +5,132 @@ interface GameProps {
   user: any;
 }
 
+const TOTAL_ROUNDS = 20;
+
 const Game: React.FC<GameProps> = ({ user }) => {
   const [loading, setLoading] = useState(false);
-  const [currentWord, setCurrentWord] = useState<string>('');
-  const [seenWords, setSeenWords] = useState<Set<string>>(new Set());
-  const [score, setScore] = useState(0);
+  const [wordList, setWordList] = useState<string[]>([]);
   const [round, setRound] = useState(0);
+  const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [resultMessage, setResultMessage] = useState('');
 
-  const fetchNewWord = async () => {
+  const loadWords = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('words')
-        .select('word')
-        .limit(1)
-        .single();
-
-      if (data) setCurrentWord(data.word);
+        .select('word');
+      if (error) throw error;
+      const words = (data || []).map((item: any) => item.word).filter(Boolean);
+      if (!words.length) {
+        setResultMessage('No words available in the database.');
+        setGameOver(true);
+        return;
+      }
+      const randomWords = Array.from({ length: TOTAL_ROUNDS }, () => {
+        const index = Math.floor(Math.random() * words.length);
+        return words[index];
+      });
+      setWordList(randomWords);
+      setRound(0);
+      setScore(0);
+      setGameOver(false);
+      setResultMessage('');
     } catch (error) {
-      console.error('Failed to fetch word', error);
+      console.error('Failed to load words', error);
+      setResultMessage('Unable to load words. Please try again later.');
+      setGameOver(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChoice = (choice: 'seen' | 'new') => {
-    const isCorrect = (choice === 'seen' && seenWords.has(currentWord)) ||
-                      (choice === 'new' && !seenWords.has(currentWord));
-
-    if (isCorrect) {
-      setScore(prev => prev + 1);
-      if (choice === 'new') {
-        setSeenWords(prev => new Set(prev).add(currentWord));
-      }
-    }
-
-    setRound(prev => prev + 1);
-
-    if (round >= 19) { // 20 rounds
-      endGame();
-    } else {
-      fetchNewWord();
-    }
-  };
-
-  const endGame = async () => {
-    setGameOver(true);
-    // Save to db
+  const saveGameResult = async (finalScore: number, wrongAnswers: number) => {
     await supabase.from('game_results').insert({
       user_id: user.id,
-      score: score,
-      correct_answers: score,
-      wrong_answers: round - score,
-      duration_seconds: 0, // TODO: add timer
+      score: finalScore,
+      correct_answers: finalScore,
+      wrong_answers: wrongAnswers,
+      duration_seconds: 0,
       played_at: new Date().toISOString()
     });
 
-    // Update profile
-    const { data: profile } = await supabase.from('profiles').select('best_score, games_played').eq('id', user.id).single();
-    const updates: any = { games_played: (profile?.games_played || 0) + 1 };
-    if (score > (profile?.best_score || 0)) {
-      updates.best_score = score;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('best_score, games_played')
+      .eq('id', user.id)
+      .single();
+
+    const updates: any = {
+      games_played: (profile?.games_played || 0) + 1,
+    };
+    if (finalScore > (profile?.best_score || 0)) {
+      updates.best_score = finalScore;
     }
+
     await supabase.from('profiles').update(updates).eq('id', user.id);
   };
 
-  const startNewGame = () => {
-    setSeenWords(new Set());
-    setScore(0);
-    setRound(0);
-    setGameOver(false);
-    fetchNewWord();
+  const endGame = async (message: string, wrongAnswers: number) => {
+    setGameOver(true);
+    setResultMessage(message);
+    await saveGameResult(score, wrongAnswers);
+  };
+
+  const handleChoice = async (choice: 'seen' | 'new') => {
+    if (!wordList.length || gameOver) return;
+
+    const currentWord = wordList[round];
+    const isSeen = wordList.slice(0, round).includes(currentWord);
+    const isCorrect = (choice === 'seen' && isSeen) || (choice === 'new' && !isSeen);
+
+    if (!isCorrect) {
+      await endGame('Wrong answer! Game over.', 1);
+      return;
+    }
+
+    setScore(prev => prev + 1);
+
+    if (round + 1 >= wordList.length) {
+      await endGame('Perfect run! Game complete.', 0);
+      return;
+    }
+
+    setRound(prev => prev + 1);
+  };
+
+  const startNewGame = async () => {
+    await loadWords();
   };
 
   useEffect(() => {
-    fetchNewWord();
+    loadWords();
   }, []);
 
-  if (gameOver) {
-    return (
-      <div className="game">
-        <h2>Game Over!</h2>
-        <p>Final Score: {score}/20</p>
-        <button onClick={startNewGame}>Play Again</button>
-      </div>
-    );
-  }
+  const currentWord = wordList[round] || '';
 
   return (
     <div className="game">
       <h2>Verbal Memory Game</h2>
-      <div className="score">Score: {score}</div>
       {loading ? (
         <p>Loading...</p>
-      ) : (
+      ) : gameOver ? (
         <div>
+          <p>{resultMessage}</p>
+          <p>Final Score: {score}/{TOTAL_ROUNDS}</p>
+          <button onClick={startNewGame}>Play Again</button>
+        </div>
+      ) : (
+        <>
+          <div className="score">Score: {score}</div>
+          <div className="round">Round: {round + 1}/{TOTAL_ROUNDS}</div>
           <div className="word-display">{currentWord}</div>
           <div className="buttons">
             <button className="seen-btn" onClick={() => handleChoice('seen')}>SEEN</button>
             <button className="new-btn" onClick={() => handleChoice('new')}>NEW</button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
