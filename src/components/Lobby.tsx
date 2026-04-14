@@ -56,9 +56,9 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
 
       const { data: waiting, error: waitingError } = await supabase
         .from('matchmaking_queue')
-        .select('player_id, created_at')
+        .select('player_id')
         .neq('player_id', userId)
-        .order('created_at', { ascending: true })
+        .order('player_id', { ascending: true })
         .limit(1)
         .maybeSingle();
       if (waitingError) throw waitingError;
