@@ -11,6 +11,8 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
   const [seenWords, setSeenWords] = useState<Set<string>>(new Set());
   const [myScore, setMyScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const [gameOver, setGameOver] = useState(false);
 
   const seedFromString = (text: string) => {
@@ -82,20 +84,21 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
 
   const currentWord = wordList[round] || '';
 
-  const finalizeMatch = async (finalMyScore: number, finalOppScore: number) => {
-    if (!match) return;
+  const finalizeMatch = async (finalMyScore: number, finalOppScore: number, latestMatch: any) => {
+    const currentMatch = latestMatch || match;
+    if (!currentMatch) return;
 
-    const isP1 = match.player1_id === userId;
+    const isP1 = currentMatch.player1_id === userId;
     const winnerId = finalMyScore > finalOppScore
       ? userId
       : finalOppScore > finalMyScore
-        ? isP1 ? match.player2_id : match.player1_id
+        ? isP1 ? currentMatch.player2_id : currentMatch.player1_id
         : null;
 
     await supabase.from('matches').update({ status: 'completed', winner_id: winnerId }).eq('id', matchId);
 
     if (winnerId) {
-      const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
+      const loserId = winnerId === currentMatch.player1_id ? currentMatch.player2_id : currentMatch.player1_id;
       const { data: winnerProfile } = await supabase.from('profiles').select('elo').eq('id', winnerId).single();
       const { data: loserProfile } = await supabase.from('profiles').select('elo').eq('id', loserId).single();
       if (winnerProfile && loserProfile) {
@@ -115,8 +118,42 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     navigate('/leaderboard');
   };
 
-  const handleChoice = async (choice: 'seen' | 'new') => {
+  const submitCompletion = async (finalMyScore: number) => {
     if (!match || gameOver) return;
+    const isP1 = match.player1_id === userId;
+    const scoreUpdate = isP1 ? { player1_score: finalMyScore } : { player2_score: finalMyScore };
+
+    const { data: freshMatch } = await supabase.from('matches').select('*').eq('id', matchId).single();
+    if (!freshMatch) return;
+
+    const nextStatus = freshMatch.status === 'waiting' ? 'completed' : 'waiting';
+    const updatePayload: any = { ...scoreUpdate, status: nextStatus };
+
+    const { data: updatedMatch } = await supabase.from('matches').update(updatePayload).eq('id', matchId).select('*').single();
+    if (!updatedMatch) return;
+
+    setMatch(updatedMatch);
+    setFinished(true);
+
+    if (updatedMatch.status === 'waiting') {
+      setWaitingForOpponent(true);
+    } else if (updatedMatch.status === 'completed') {
+      const otherScore = isP1 ? updatedMatch.player2_score ?? 0 : updatedMatch.player1_score ?? 0;
+      await finalizeMatch(finalMyScore, otherScore, updatedMatch);
+    }
+  };
+
+  useEffect(() => {
+    if (!finished || gameOver || !match) return;
+    if (match.status === 'waiting') {
+      const isP1 = match.player1_id === userId;
+      const otherScore = isP1 ? match.player2_score ?? 0 : match.player1_score ?? 0;
+      finalizeMatch(myScore, otherScore, match);
+    }
+  }, [finished, gameOver, match, myScore]);
+
+  const handleChoice = async (choice: 'seen' | 'new') => {
+    if (!match || gameOver || waitingForOpponent) return;
     const alreadySeen = seenWords.has(currentWord);
     const isCorrect = (choice === 'seen' && alreadySeen) || (choice === 'new' && !alreadySeen);
     const nextSeen = new Set(seenWords);
@@ -124,7 +161,7 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     setSeenWords(nextSeen);
 
     if (!isCorrect) {
-      await finalizeMatch(myScore, opponentScore);
+      await submitCompletion(myScore);
       return;
     }
 
@@ -138,7 +175,7 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     setMyScore(updatedScore);
 
     if (round >= 19) {
-      await finalizeMatch(updatedScore, opponentScore);
+      await submitCompletion(updatedScore);
       return;
     }
 
@@ -149,12 +186,17 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
 
   return (
     <div className="game-screen">
-      <div className="hud">Opponent Score: {userId === match.player1_id ? match.player2_score : match.player1_score}</div>
+      <div className="hud">
+        <div>Your Score: {myScore}</div>
+        <div>Opponent Score: {opponentScore}</div>
+        <div>Round: {round + 1}/20</div>
+      </div>
       <h1 className="word-display">{currentWord}</h1>
       <div className="controls">
-        <button onClick={() => handleChoice('seen')}>SEEN</button>
-        <button onClick={() => handleChoice('new')}>NEW</button>
+        <button onClick={() => handleChoice('seen')} disabled={waitingForOpponent}>SEEN</button>
+        <button onClick={() => handleChoice('new')} disabled={waitingForOpponent}>NEW</button>
       </div>
+      {waitingForOpponent && <div className="waiting-text">Waiting for opponent to finish...</div>}
     </div>
   );
 };
