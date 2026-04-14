@@ -21,20 +21,10 @@ const Profile: React.FC<ProfileProps> = ({ userId }) => {
         .single();
       setUser(userData);
 
-      /* Fetch game history
-      const { data: historyData } = await supabase
-        .from('game_results')
-        .select('*')
-        .eq('user_id', userId)
-        .order('played_at', { ascending: false })
-        .limit(10);
-      setHistory(historyData || []);
-
       setLoading(false);
     };
     fetchData();
   }, [userId]);
-*/
   if (loading || !user) return <div className="loading">Loading...</div>;
 
   return (
