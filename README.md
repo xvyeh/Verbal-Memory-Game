@@ -1,3 +1,5 @@
+# Change it to multiplayer, use supabase, person with higher score wins and gets elo which will be shown instead of a leaderboard.
+
 # 🧠 Verbal Memory Game
 
 A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbenchmark.com/tests/verbal-memory) - test how many words you can remember before making a mistake!
