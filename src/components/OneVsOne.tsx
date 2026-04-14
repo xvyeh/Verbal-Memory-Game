@@ -66,22 +66,50 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     
     if (choice === 'new') history.add(currentWord);
 
+    if (!isCorrect) {
+      await finalize();
+      return;
+    }
+
     const isP1 = match.player1_id === userId;
-    const update = isP1 ? { player1_score: match.player1_score + (isCorrect ? 1 : 0) } 
-                       : { player2_score: match.player2_score + (isCorrect ? 1 : 0) };
+    const update = isP1 ? { player1_score: match.player1_score + 1 } 
+                       : { player2_score: match.player2_score + 1 };
 
     await supabase.from('matches').update(update).eq('id', matchId);
 
     if (round < 19) setRound(r => r + 1);
-    else finalize();
+    else await finalize();
   };
 
   const finalize = async () => {
-    const win = (userId === match.player1_id && match.player1_score > match.player2_score) || 
-                (userId === match.player2_id && match.player2_score > match.player1_score);
-    
-    await supabase.from('matches').update({ status: 'completed', winner_id: win ? userId : null }).eq('id', matchId);
-    alert(win ? "You Won! +25 ELO" : "Game Over!");
+    const p1Score = match.player1_score;
+    const p2Score = match.player2_score;
+    const isP1 = match.player1_id === userId;
+    const myScore = isP1 ? p1Score : p2Score;
+    const oppScore = isP1 ? p2Score : p1Score;
+    const win = myScore > oppScore;
+    const tie = myScore === oppScore;
+
+    let winnerId = null;
+    if (!tie) {
+      winnerId = win ? userId : (isP1 ? match.player2_id : match.player1_id);
+    }
+
+    // Update match
+    await supabase.from('matches').update({ status: 'completed', winner_id: winnerId }).eq('id', matchId);
+
+    // Update ELO
+    if (!tie) {
+      const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
+      const { data: winnerProfile } = await supabase.from('profiles').select('elo').eq('id', winnerId).single();
+      const { data: loserProfile } = await supabase.from('profiles').select('elo').eq('id', loserId).single();
+      if (winnerProfile && loserProfile) {
+        await supabase.from('profiles').update({ elo: (winnerProfile.elo || 1000) + 25 }).eq('id', winnerId);
+        await supabase.from('profiles').update({ elo: Math.max(0, (loserProfile.elo || 1000) - 25) }).eq('id', loserId);
+      }
+    }
+
+    alert(`Game Over!\nYour Score: ${myScore}\nOpponent Score: ${oppScore}\n${win ? '+25 ELO' : tie ? 'Tie' : '-25 ELO'}`);
     navigate('/leaderboard');
   };
 
