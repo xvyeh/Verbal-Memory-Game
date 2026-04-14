@@ -27,27 +27,49 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
     return () => { supabase.removeChannel(channel); };
   }, [userId, navigate]);
 
+  const getMatchWords = async () => {
+    const { data: words, error: wordsError } = await supabase.rpc('get_random_words', { cnt: 20 });
+    if (wordsError || !words) {
+      const { data: storedWords, error: storedWordsError } = await supabase
+        .from('words')
+        .select('word');
+      if (storedWordsError || !storedWords?.length) {
+        throw wordsError || storedWordsError || new Error('No words available.');
+      }
+      return Array.from({ length: 20 }, () => {
+        const index = Math.floor(Math.random() * storedWords.length);
+        return storedWords[index].word;
+      });
+    }
+    return words.map((w: any) => w.word);
+  };
+
   const startMatchmaking = async () => {
     setIsQueuing(true);
     setQueueError(null);
 
     try {
+      const { error: upsertError } = await supabase
+        .from('matchmaking_queue')
+        .upsert({ player_id: userId }, { onConflict: 'player_id' });
+      if (upsertError) throw upsertError;
+
       const { data: waiting, error: waitingError } = await supabase
         .from('matchmaking_queue')
-        .select('*')
+        .select('player_id, created_at')
         .neq('player_id', userId)
+        .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
       if (waitingError) throw waitingError;
 
-      if (waiting) {
-        const { data: words, error: wordsError } = await supabase.rpc('get_random_words', { cnt: 20 });
-        if (wordsError) throw wordsError;
+      if (waiting && userId > waiting.player_id) {
+        const words = await getMatchWords();
 
         const { error: insertError } = await supabase.from('matches').insert({
           player1_id: waiting.player_id,
           player2_id: userId,
-          match_words: words.map((w: any) => w.word),
+          match_words: words,
           status: 'active'
         });
         if (insertError) throw insertError;
@@ -55,13 +77,8 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
         const { error: deleteError } = await supabase
           .from('matchmaking_queue')
           .delete()
-          .eq('player_id', waiting.player_id);
+          .in('player_id', [waiting.player_id, userId]);
         if (deleteError) throw deleteError;
-      } else {
-        const { error: upsertError } = await supabase
-          .from('matchmaking_queue')
-          .upsert({ player_id: userId }, { onConflict: 'player_id' });
-        if (upsertError) throw upsertError;
       }
     } catch (error: any) {
       console.error('Matchmaking error', error);
