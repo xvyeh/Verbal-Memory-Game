@@ -15,7 +15,7 @@ const Profile: React.FC<ProfileProps> = ({ userId }) => {
     const fetchData = async () => {
       // Fetch user data
       const { data: userData } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
@@ -35,7 +35,7 @@ const Profile: React.FC<ProfileProps> = ({ userId }) => {
     fetchData();
   }, [userId]);
 
-  if (loading || !user) return <div>Loading...</div>;
+  if (loading || !user) return <div className="loading">Loading...</div>;
 
   return (
     <div className="profile-container">
@@ -43,15 +43,15 @@ const Profile: React.FC<ProfileProps> = ({ userId }) => {
         <h1>👤 {user.username}</h1>
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-value">{user.elo}</div>
+            <div className="stat-value">{user.elo || 1000}</div>
             <div className="stat-label">ELO</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{user.best_score}</div>
+            <div className="stat-value">{user.best_score || 0}</div>
             <div className="stat-label">Best Score</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{user.games_played}</div>
+            <div className="stat-value">{user.games_played || 0}</div>
             <div className="stat-label">Games Played</div>
           </div>
         </div>
