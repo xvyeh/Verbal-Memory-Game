@@ -29,7 +29,7 @@ A full-stack verbal memory game inspired by [HumanBenchmark.com](https://humanbe
 
 ```bash
 # Clone repo
-git clone https://github.com/xvyeh/WordMemorise.git
+git clone https://github.com/xvyeh/Verbal-Memory-Game.git
 cd WordMemorise
 
 # Backend setup
