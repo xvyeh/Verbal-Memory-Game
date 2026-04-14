@@ -36,10 +36,6 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
       if (!data) return;
       setMatch(data);
 
-      if (Array.isArray(data.match_words) && data.match_words.length) {
-        setWordList(data.match_words);
-        return;
-      }
       if (Array.isArray(data.words) && data.words.length) {
         setWordList(data.words);
         return;
