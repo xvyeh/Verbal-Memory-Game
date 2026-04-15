@@ -31,7 +31,7 @@ Link to the current website is: [Word Memorise](https://word-memorise.vercel.app
 ```bash
 # Clone repo
 git clone https://github.com/xvyeh/Verbal-Memory-Game.git
-cd WordMemorise
+cd Verbal-Memory-Game
 
 # Backend setup
 cd backend
