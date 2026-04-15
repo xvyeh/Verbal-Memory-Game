@@ -47,6 +47,30 @@ body {
   color: #667eea;
 }
 
+/* ================= LOGOUT BUTTON ================= */
+
+.logout-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+  font-weight: bold;
+
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.logout-btn:active {
+  transform: scale(0.98);
+}
+
 /* ================= LOADING ================= */
 
 .loading {
@@ -308,18 +332,39 @@ body {
   background: rgba(0,0,0,0.3);
 }
 
-.buttons {
+/* SOLO STYLE BUTTONS (shared with 1v1) */
+.buttons,
+.controls {
   display: flex;
   gap: 1rem;
 }
 
-.buttons button {
+.buttons button,
+.controls button {
   flex: 1;
   padding: 14px;
   border-radius: 12px;
   font-weight: bold;
+
+  border: none;
+  cursor: pointer;
+  color: white;
+
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
 }
 
+.buttons button:hover,
+.controls button:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+.buttons button:active,
+.controls button:active {
+  transform: scale(0.98);
+}
+
+/* SOLO COLORS */
 .seen-btn {
   background: linear-gradient(135deg, #22c55e, #16a34a);
 }
@@ -348,33 +393,9 @@ body {
   background: rgba(255,255,255,0.05);
 }
 
-.controls {
-  display: flex;
-  gap: 1rem;
-}
-
-.controls button {
-  flex: 1;
-  padding: 14px;
-  border-radius: 12px;
-  font-weight: bold;
-
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
 .waiting-text {
   margin-top: 1rem;
   color: #facc15;
-}
-
-/* ================= BUTTON GLOBAL ================= */
-
-button {
-  transition: all 0.2s ease;
-}
-
-button:hover {
-  transform: translateY(-2px);
 }
 
 /* ================= MOBILE ================= */
