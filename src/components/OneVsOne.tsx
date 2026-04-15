@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+
+// Match status flow:
+// 'active'       → both players still playing
+// 'player1_done' → player1 finished (wrong answer or completed all rounds)
+// 'player2_done' → player2 finished
+// 'completed'    → both done, winner decided
 
 const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
   const { matchId } = useParams();
@@ -11,9 +17,9 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
   const [seenWords, setSeenWords] = useState<Set<string>>(new Set());
   const [myScore, setMyScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
-  const [finished, setFinished] = useState(false);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const gameOverRef = useRef(false); // prevent double-finalize
 
   const seedFromString = (text: string) => {
     let hash = 0;
@@ -35,15 +41,105 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     return result;
   };
 
+  const isPlayer1 = (matchData: any) => matchData?.player1_id === userId;
+
   const extractScores = (matchData: any) => {
     if (!matchData) return { my: 0, opponent: 0 };
-    const isP1 = matchData.player1_id === userId;
+    const p1 = isPlayer1(matchData);
     return {
-      my: isP1 ? matchData.player1_score ?? 0 : matchData.player2_score ?? 0,
-      opponent: isP1 ? matchData.player2_score ?? 0 : matchData.player1_score ?? 0,
+      my: p1 ? matchData.player1_score ?? 0 : matchData.player2_score ?? 0,
+      opponent: p1 ? matchData.player2_score ?? 0 : matchData.player1_score ?? 0,
     };
   };
 
+  // ─── Finalize: update ELO and navigate ───────────────────────────────────
+  const finalizeMatch = async (myFinal: number, oppFinal: number, matchData: any) => {
+    if (gameOverRef.current) return;
+    gameOverRef.current = true;
+    setGameOver(true);
+
+    const p1 = isPlayer1(matchData);
+    const myId = userId;
+    const oppId = p1 ? matchData.player2_id : matchData.player1_id;
+
+    const winnerId =
+      myFinal > oppFinal ? myId :
+      oppFinal > myFinal ? oppId :
+      null; // tie
+
+    // Only one player should write 'completed' + winner — use a guard
+    await supabase
+      .from('matches')
+      .update({ status: 'completed', winner_id: winnerId })
+      .eq('id', matchId)
+      .neq('status', 'completed'); // idempotency guard
+
+    // ELO
+    if (winnerId) {
+      const loserId = winnerId === myId ? oppId : myId;
+      const [{ data: winnerProfile }, { data: loserProfile }] = await Promise.all([
+        supabase.from('profiles').select('elo').eq('id', winnerId).single(),
+        supabase.from('profiles').select('elo').eq('id', loserId).single(),
+      ]);
+      if (winnerProfile && loserProfile) {
+        await Promise.all([
+          supabase.from('profiles').update({ elo: (winnerProfile.elo || 1000) + 25 }).eq('id', winnerId),
+          supabase.from('profiles').update({ elo: Math.max(0, (loserProfile.elo || 1000) - 25) }).eq('id', loserId),
+        ]);
+      }
+    }
+
+    const resultText =
+      myFinal === oppFinal
+        ? `Tie! Both scored ${myFinal}`
+        : myFinal > oppFinal
+          ? `You won! ${myFinal} vs ${oppFinal} (+25 ELO)`
+          : `You lost. ${myFinal} vs ${oppFinal} (-25 ELO)`;
+
+    alert(resultText);
+    navigate('/leaderboard');
+  };
+
+  // ─── Submit this player's final score ────────────────────────────────────
+  const submitMyScore = async (finalScore: number) => {
+    if (gameOverRef.current) return;
+
+    // Fetch the freshest match state
+    const { data: fresh } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('id', matchId)
+      .single();
+    if (!fresh) return;
+
+    const p1 = isPlayer1(fresh);
+    const myDoneStatus = p1 ? 'player1_done' : 'player2_done';
+    const oppDoneStatus = p1 ? 'player2_done' : 'player1_done';
+    const myScoreField = p1 ? 'player1_score' : 'player2_score';
+    const oppScoreField = p1 ? 'player2_score' : 'player1_score';
+
+    const opponentAlreadyDone =
+      fresh.status === oppDoneStatus || fresh.status === 'completed';
+
+    if (opponentAlreadyDone) {
+      // Opponent finished first — we are second; finalize now
+      const oppFinal = fresh[oppScoreField] ?? 0;
+      await supabase
+        .from('matches')
+        .update({ [myScoreField]: finalScore, status: 'completed' })
+        .eq('id', matchId);
+      await finalizeMatch(finalScore, oppFinal, { ...fresh, [myScoreField]: finalScore });
+    } else {
+      // We finished first — wait for opponent
+      await supabase
+        .from('matches')
+        .update({ [myScoreField]: finalScore, status: myDoneStatus })
+        .eq('id', matchId);
+      setWaitingForOpponent(true);
+    }
+  };
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     const initMatch = async () => {
       const { data } = await supabase.from('matches').select('*').eq('id', matchId).single();
@@ -68,13 +164,30 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     };
     initMatch();
 
-    const sub = supabase.channel(`live_match_${matchId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
-        (payload) => {
-          setMatch(payload.new);
-          const { my, opponent } = extractScores(payload.new);
-          setMyScore(my);
+    // Real-time: watch for opponent finishing
+    const sub = supabase
+      .channel(`live_match_${matchId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        async (payload) => {
+          const updated = payload.new as any;
+          setMatch(updated);
+          const { my, opponent } = extractScores(updated);
           setOpponentScore(opponent);
+
+          // If we're waiting and opponent just finished → finalize
+          if (
+            waitingForOpponent &&
+            !gameOverRef.current &&
+            (updated.status === 'player1_done' || updated.status === 'player2_done' || updated.status === 'completed')
+          ) {
+            // Both are now done
+            const p1 = isPlayer1(updated);
+            const myFinal = p1 ? updated.player1_score ?? 0 : updated.player2_score ?? 0;
+            const oppFinal = p1 ? updated.player2_score ?? 0 : updated.player1_score ?? 0;
+            await finalizeMatch(myFinal, oppFinal, updated);
+          }
         }
       )
       .subscribe();
@@ -82,100 +195,61 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
     return () => { supabase.removeChannel(sub); };
   }, [matchId, userId]);
 
-  const currentWord = wordList[round] || '';
-
-  const finalizeMatch = async (finalMyScore: number, finalOppScore: number, latestMatch: any) => {
-    const currentMatch = latestMatch || match;
-    if (!currentMatch) return;
-
-    const isP1 = currentMatch.player1_id === userId;
-    const winnerId = finalMyScore > finalOppScore
-      ? userId
-      : finalOppScore > finalMyScore
-        ? isP1 ? currentMatch.player2_id : currentMatch.player1_id
-        : null;
-
-    await supabase.from('matches').update({ status: 'completed', winner_id: winnerId }).eq('id', matchId);
-
-    if (winnerId) {
-      const loserId = winnerId === currentMatch.player1_id ? currentMatch.player2_id : currentMatch.player1_id;
-      const { data: winnerProfile } = await supabase.from('profiles').select('elo').eq('id', winnerId).single();
-      const { data: loserProfile } = await supabase.from('profiles').select('elo').eq('id', loserId).single();
-      if (winnerProfile && loserProfile) {
-        await supabase.from('profiles').update({ elo: (winnerProfile.elo || 1000) + 25 }).eq('id', winnerId);
-        await supabase.from('profiles').update({ elo: Math.max(0, (loserProfile.elo || 1000) - 25) }).eq('id', loserId);
-      }
-    }
-
-    const resultText = finalMyScore === finalOppScore
-      ? `Tie game! Your Score: ${finalMyScore}, Opponent Score: ${finalOppScore}`
-      : finalMyScore > finalOppScore
-        ? `You won! Your Score: ${finalMyScore}, Opponent Score: ${finalOppScore} (+25 ELO)`
-        : `You lost. Your Score: ${finalMyScore}, Opponent Score: ${finalOppScore} (-25 ELO)`;
-
-    setGameOver(true);
-    alert(resultText);
-    navigate('/leaderboard');
-  };
-
-  const submitCompletion = async (finalMyScore: number) => {
-    if (!match || gameOver) return;
-    const isP1 = match.player1_id === userId;
-    const scoreUpdate = isP1 ? { player1_score: finalMyScore } : { player2_score: finalMyScore };
-
-    const { data: freshMatch } = await supabase.from('matches').select('*').eq('id', matchId).single();
-    if (!freshMatch) return;
-
-    const nextStatus = freshMatch.status === 'waiting' ? 'completed' : 'waiting';
-    const updatePayload: any = { ...scoreUpdate, status: nextStatus };
-
-    const { data: updatedMatch } = await supabase.from('matches').update(updatePayload).eq('id', matchId).select('*').single();
-    if (!updatedMatch) return;
-
-    setMatch(updatedMatch);
-    setFinished(true);
-
-    if (updatedMatch.status === 'waiting') {
-      setWaitingForOpponent(true);
-    } else if (updatedMatch.status === 'completed') {
-      const otherScore = isP1 ? updatedMatch.player2_score ?? 0 : updatedMatch.player1_score ?? 0;
-      await finalizeMatch(finalMyScore, otherScore, updatedMatch);
-    }
-  };
-
+  // Need waitingForOpponent in the subscription closure — re-subscribe when it changes
   useEffect(() => {
-    if (!finished || gameOver || !match) return;
-    if (match.status === 'waiting') {
-      const isP1 = match.player1_id === userId;
-      const otherScore = isP1 ? match.player2_score ?? 0 : match.player1_score ?? 0;
-      finalizeMatch(myScore, otherScore, match);
-    }
-  }, [finished, gameOver, match, myScore]);
+    if (!waitingForOpponent || !matchId) return;
 
+    // Check once immediately in case opponent already finished while we were submitting
+    const checkNow = async () => {
+      const { data: fresh } = await supabase.from('matches').select('*').eq('id', matchId).single();
+      if (!fresh || gameOverRef.current) return;
+      const p1 = isPlayer1(fresh);
+      const oppDoneStatus = p1 ? 'player2_done' : 'player1_done';
+      if (fresh.status === oppDoneStatus || fresh.status === 'completed') {
+        const myFinal = p1 ? fresh.player1_score ?? 0 : fresh.player2_score ?? 0;
+        const oppFinal = p1 ? fresh.player2_score ?? 0 : fresh.player1_score ?? 0;
+        await finalizeMatch(myFinal, oppFinal, fresh);
+      }
+    };
+    checkNow();
+
+    // Also poll every 3s as a fallback for missed realtime events
+    const interval = setInterval(checkNow, 3000);
+    return () => clearInterval(interval);
+  }, [waitingForOpponent, matchId]);
+
+  // ─── Game input ───────────────────────────────────────────────────────────
   const handleChoice = async (choice: 'seen' | 'new') => {
-    if (!match || gameOver || waitingForOpponent) return;
+    if (!match || gameOverRef.current || waitingForOpponent) return;
+
+    const currentWord = wordList[round];
     const alreadySeen = seenWords.has(currentWord);
-    const isCorrect = (choice === 'seen' && alreadySeen) || (choice === 'new' && !alreadySeen);
+    const isCorrect =
+      (choice === 'seen' && alreadySeen) || (choice === 'new' && !alreadySeen);
+
     const nextSeen = new Set(seenWords);
     nextSeen.add(currentWord);
     setSeenWords(nextSeen);
 
     if (!isCorrect) {
-      await submitCompletion(myScore);
+      // Wrong answer → player is done with current score
+      await submitMyScore(myScore);
       return;
     }
 
     const updatedScore = myScore + 1;
-    const isP1 = match.player1_id === userId;
-    const update = isP1
-      ? { player1_score: updatedScore }
-      : { player2_score: updatedScore };
-
-    await supabase.from('matches').update(update).eq('id', matchId);
     setMyScore(updatedScore);
 
+    // Keep opponent's live score visible (optimistic update to DB)
+    const p1 = isPlayer1(match);
+    await supabase
+      .from('matches')
+      .update(p1 ? { player1_score: updatedScore } : { player2_score: updatedScore })
+      .eq('id', matchId);
+
     if (round >= 19) {
-      await submitCompletion(updatedScore);
+      // Completed all rounds
+      await submitMyScore(updatedScore);
       return;
     }
 
@@ -191,12 +265,18 @@ const OneVsOne: React.FC<{ userId: string }> = ({ userId }) => {
         <div>Opponent Score: {opponentScore}</div>
         <div>Round: {round + 1}/20</div>
       </div>
-      <h1 className="word-display">{currentWord}</h1>
+      <h1 className="word-display">{wordList[round] || ''}</h1>
       <div className="controls">
-        <button onClick={() => handleChoice('seen')} disabled={waitingForOpponent}>SEEN</button>
-        <button onClick={() => handleChoice('new')} disabled={waitingForOpponent}>NEW</button>
+        <button onClick={() => handleChoice('seen')} disabled={waitingForOpponent || gameOver}>
+          SEEN
+        </button>
+        <button onClick={() => handleChoice('new')} disabled={waitingForOpponent || gameOver}>
+          NEW
+        </button>
       </div>
-      {waitingForOpponent && <div className="waiting-text">Waiting for opponent to finish...</div>}
+      {waitingForOpponent && (
+        <div className="waiting-text">You're done! Waiting for opponent to finish...</div>
+      )}
     </div>
   );
 };
