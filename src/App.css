@@ -1,57 +1,89 @@
-/* ================= AUTH IMPROVEMENT PATCH (ADD ONLY) ================= */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
-/* INPUTS → glass + game feel */
-.auth-card input {
-  background: rgba(0, 0, 0, 0.25) !important;
-  border: 1px solid rgba(255,255,255,0.15) !important;
-  border-radius: 12px !important;
+  max-width: 400px;
+  margin: 80px auto;
+  padding: 2.5rem;
 
-  color: white !important;
-  font-size: 0.95rem;
+  border-radius: 20px;
+
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+/* title */
+.auth-form h2 {
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+/* error */
+.auth-form .error {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.2);
+  border: 1px solid #ff6b6b;
+
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+/* inputs */
+.auth-form input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 1rem;
+
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+
+  background: rgba(0, 0, 0, 0.25);
+  color: white;
 
   transition: all 0.2s ease;
 }
 
-.auth-card input::placeholder {
+.auth-form input::placeholder {
   color: rgba(255,255,255,0.5);
 }
 
-.auth-card input:focus {
-  outline: none !important;
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 3px rgba(102,126,234,0.25) !important;
+.auth-form input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.25);
   transform: translateY(-1px);
 }
 
-/* BUTTON → match game style (green primary action) */
-.auth-card button {
+/* button */
+.auth-form button {
   width: 100%;
   padding: 14px;
 
-  border: none !important;
-  border-radius: 12px !important;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
 
   font-weight: bold;
-  color: white !important;
+  color: white;
 
-  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
 
   box-shadow: 0 6px 18px rgba(0,0,0,0.3);
   transition: all 0.2s ease;
 }
 
-.auth-card button:hover {
+.auth-form button:hover {
   transform: translateY(-3px) scale(1.02);
 }
 
-.auth-card button:active {
+.auth-form button:active {
   transform: scale(0.98);
-}
-
-/* OPTIONAL: make auth card feel more "game UI" */
-.auth-card {
-  border: 1px solid rgba(255,255,255,0.08);
 }
 
 /* ================= GLOBAL ================= */
