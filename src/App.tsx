@@ -47,10 +47,10 @@ const App: React.FC = () => {
         <div className="nav-links">
           {user ? (
             <>
-              <Link to="/lobby">1v1 Arena</Link>
-              <Link to="/game">Solo Play</Link>
+              <Link to="/lobby">1v1</Link>
+              <Link to="/game">Solo</Link>
               <Link to="/profile">Profile</Link>
-              <Link to="/docs">Docs</Link>
+              <Link to="/docs">Documentation</Link>
               <Link to="/leaderboard">Leaderboard</Link>
               <button onClick={handleLogout} className="logout-btn">
                 Logout
