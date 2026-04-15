@@ -130,7 +130,6 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
 
   return (
     <div className="lobby-container">
-      <h2>Enter the Queue:</h2>
       {matchFound ? (
         <div className="match-found">
           <h3>Match found!</h3>
