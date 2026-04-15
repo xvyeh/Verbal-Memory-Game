@@ -136,7 +136,7 @@ const Lobby: React.FC<{ userId: string }> = ({ userId }) => {
           <p>Preparing your game...</p>
         </div>
       ) : (
-        <button onClick={startMatchmaking} disabled={isQueuing}>
+        <button className="queue-btn" onClick={startMatchmaking} disabled={isQueuing}>
           {isQueuing ? "Finding Opponent..." : "Enter Queue"}
         </button>
       )}
