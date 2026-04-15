@@ -16,9 +16,9 @@ Link to the current website is: [Word Memorise](https://word-memorise.vercel.app
 | Layer | Technologies |
 |-------|--------------|
 | Frontend | React 18, TypeScript, CSS3 |
-| Backend | Vercel API Routes, Node.js |
+| Backend | Supabase (PostgreSQL + Realtime)|
 | Database | PostgreSQL |
-| Auth | bcrypt |
+| Auth | Supabase Auth |
 
 ## 🚀 Quick Start
 
